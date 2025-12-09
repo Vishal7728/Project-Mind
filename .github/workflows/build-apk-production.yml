@@ -1,0 +1,345 @@
+name: Build APK - Production Grade
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+env:
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+  ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/25.1.8387110
+  GRADLE_USER_HOME: ~/.gradle
+  GRADLE_OPTS: -Xmx2048m -XX:MaxPermSize=512m
+
+jobs:
+  validate:
+    name: Validate Project Setup
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Run Build Validation
+      run: |
+        python validate_build.py
+        echo "Build validation successful!"
+
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    needs: validate
+    timeout-minutes: 60
+    
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    # ============================================================================
+    # STEP 1: Setup Java (Critical for Android builds)
+    # ============================================================================
+    - name: Set up Java 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+      env:
+        JAVA_OPTS: -Xmx2048m
+
+    # ============================================================================
+    # STEP 2: Setup Python (Required for Buildozer)
+    # ============================================================================
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    # ============================================================================
+    # STEP 3: Install Android SDK Components
+    # ============================================================================
+    - name: Install Android SDK Components
+      run: |
+        echo "Installing Android SDK tools..."
+        mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
+        
+        # Download SDK tools if not cached
+        if [ ! -d "$ANDROID_SDK_ROOT/cmdline-tools/latest" ]; then
+          echo "Downloading Android SDK Command-line Tools..."
+          cd $ANDROID_SDK_ROOT/cmdline-tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip
+          unzip -q commandlinetools-linux-10406996_latest.zip
+          mv cmdline-tools latest
+          rm commandlinetools-linux-10406996_latest.zip
+        fi
+        
+        # Set PATH
+        export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
+        
+        # Accept licenses
+        echo "Accepting Android SDK licenses..."
+        yes | sdkmanager --licenses 2>/dev/null || true
+        
+        # Install required packages
+        echo "Installing SDK packages..."
+        sdkmanager --install "platforms;android-33" --verbose 2>&1 | grep -i "installed" || true
+        sdkmanager --install "build-tools;33.0.0" --verbose 2>&1 | grep -i "installed" || true
+        sdkmanager --install "platform-tools" --verbose 2>&1 | grep -i "installed" || true
+        
+        # Install NDK 25.1.8387110 (corresponds to 25b)
+        echo "Installing Android NDK 25.1.8387110..."
+        sdkmanager --install "ndk;25.1.8387110" --verbose 2>&1 | grep -i "installed" || true
+        
+        # Verify installations
+        echo "Verifying Android SDK installations..."
+        ls -la $ANDROID_SDK_ROOT/platforms/ || echo "Platforms not found"
+        ls -la $ANDROID_SDK_ROOT/build-tools/ || echo "Build-tools not found"
+        ls -la $ANDROID_SDK_ROOT/ndk/ || echo "NDK not found"
+
+    # ============================================================================
+    # STEP 4: Verify Environment Variables
+    # ============================================================================
+    - name: Verify Environment Setup
+      run: |
+        echo "================================"
+        echo "ENVIRONMENT VERIFICATION"
+        echo "================================"
+        echo ""
+        
+        # Java version
+        echo "Java Version:"
+        java -version
+        echo ""
+        
+        # Python version
+        echo "Python Version:"
+        python --version
+        echo ""
+        
+        # Android SDK
+        echo "Android SDK Root: $ANDROID_SDK_ROOT"
+        ls -la $ANDROID_SDK_ROOT/ 2>/dev/null | head -10 || echo "SDK not found"
+        echo ""
+        
+        # Android NDK
+        echo "Android NDK Home: $ANDROID_NDK_HOME"
+        ls -la $ANDROID_NDK_HOME/ 2>/dev/null | head -5 || echo "NDK not found"
+        echo ""
+        
+        # Gradle
+        echo "Gradle user home: $GRADLE_USER_HOME"
+        echo "Gradle options: $GRADLE_OPTS"
+        echo ""
+        
+        # buildozer.spec
+        echo "buildozer.spec exists:"
+        test -f buildozer.spec && echo "YES - $(wc -l < buildozer.spec) lines" || echo "NO - CRITICAL ERROR"
+        echo ""
+        
+        echo "================================"
+
+    # ============================================================================
+    # STEP 5: Cache Gradle (Speed up builds)
+    # ============================================================================
+    - name: Cache Gradle Files
+      uses: actions/cache@v3
+      with:
+        path: ~/.gradle/caches
+        key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: gradle-${{ runner.os }}-
+
+    # ============================================================================
+    # STEP 6: Cache Android SDK (Speed up builds)
+    # ============================================================================
+    - name: Cache Android SDK
+      uses: actions/cache@v3
+      with:
+        path: /usr/local/lib/android/sdk
+        key: android-sdk-${{ runner.os }}-api-33-ndk-25b
+        restore-keys: android-sdk-${{ runner.os }}-
+
+    # ============================================================================
+    # STEP 7: Install Buildozer and Dependencies
+    # ============================================================================
+    - name: Install Buildozer and Dependencies
+      run: |
+        echo "Installing Python build dependencies..."
+        python -m pip install --upgrade pip setuptools wheel
+        
+        # Install critical Cython version (MUST be 0.29.33 for Kivy)
+        python -m pip install Cython==0.29.33 --no-cache-dir
+        
+        # Install Buildozer
+        python -m pip install buildozer --no-cache-dir
+        
+        # Install Kivy and other requirements
+        python -m pip install kivy pillow --no-cache-dir
+        
+        # Verify installations
+        echo ""
+        echo "Installed packages:"
+        pip list | grep -E "buildozer|Cython|kivy|Pillow"
+        echo ""
+        echo "Buildozer version:"
+        buildozer --version
+        echo ""
+
+    # ============================================================================
+    # STEP 8: Clean Previous Builds (Fresh start)
+    # ============================================================================
+    - name: Clean Previous Builds
+      run: |
+        echo "Cleaning previous build artifacts..."
+        buildozer android clean
+        echo "Build clean complete"
+
+    # ============================================================================
+    # STEP 9: Build Release APK (Main build step)
+    # ============================================================================
+    - name: Build Release APK
+      run: |
+        echo "================================"
+        echo "STARTING APK BUILD"
+        echo "================================"
+        echo ""
+        echo "Build Configuration:"
+        echo "  App Title: Project Mind - Living AI"
+        echo "  Package: org.projectmind.projectmind"
+        echo "  Version: 1.0.0"
+        echo "  Target API: 33"
+        echo "  Min API: 33"
+        echo "  NDK: 25b"
+        echo "  Architectures: arm64-v8a, armeabi-v7a"
+        echo ""
+        
+        # Build with verbose output
+        buildozer android release 2>&1 | tee build.log
+        
+        BUILD_EXIT=$?
+        
+        echo ""
+        echo "================================"
+        if [ $BUILD_EXIT -eq 0 ]; then
+          echo "BUILD SUCCESSFUL"
+        else
+          echo "BUILD FAILED - Exit code: $BUILD_EXIT"
+          echo "Showing last 100 lines of build log:"
+          tail -100 build.log
+          exit $BUILD_EXIT
+        fi
+        echo "================================"
+
+    # ============================================================================
+    # STEP 10: Verify APK Was Created
+    # ============================================================================
+    - name: Verify APK Generation
+      run: |
+        echo "Checking for generated APK..."
+        echo ""
+        
+        # Check expected locations
+        echo "Checking bin/ directory:"
+        if [ -d "bin" ]; then
+          ls -lah bin/
+          APK_COUNT=$(ls -1 bin/*.apk 2>/dev/null | wc -l)
+          echo "APKs found: $APK_COUNT"
+        else
+          echo "bin/ directory not found"
+        fi
+        
+        echo ""
+        echo "Searching for APK in buildozer output:"
+        find .buildozer -name "*.apk" -type f 2>/dev/null || echo "No APKs found in .buildozer"
+        
+        echo ""
+        echo "Expected file: bin/projectmind-1.0.0-release.apk"
+        test -f bin/projectmind-1.0.0-release.apk && echo "FOUND - Ready for upload" || echo "NOT FOUND - Build may have failed"
+
+    # ============================================================================
+    # STEP 11: List Build Directory
+    # ============================================================================
+    - name: List Build Output
+      if: always()
+      run: |
+        echo "Build output directory structure:"
+        echo ""
+        echo "=== bin/ contents ==="
+        ls -lah bin/ 2>/dev/null || echo "bin/ not found"
+        echo ""
+        echo "=== .buildozer/android/app/build/outputs/ ==="
+        find .buildozer/android/app/build/outputs -type f -name "*.apk" 2>/dev/null | head -10 || echo "No outputs found"
+
+    # ============================================================================
+    # STEP 12: Upload APK as Artifact
+    # ============================================================================
+    - name: Upload APK Artifact
+      if: success()
+      uses: actions/upload-artifact@v3
+      with:
+        name: projectmind-apk-${{ github.run_number }}
+        path: bin/projectmind-*.apk
+        retention-days: 30
+        if-no-files-found: warn
+
+    # ============================================================================
+    # STEP 13: Create Release (Optional - only on tags)
+    # ============================================================================
+    - name: Create GitHub Release
+      if: startsWith(github.ref, 'refs/tags/') && success()
+      uses: softprops/action-gh-release@v1
+      with:
+        files: bin/projectmind-*.apk
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # ============================================================================
+    # STEP 14: Build Summary
+    # ============================================================================
+    - name: Build Summary
+      if: always()
+      run: |
+        echo ""
+        echo "======================================="
+        echo "BUILD SUMMARY"
+        echo "======================================="
+        echo ""
+        echo "Repository: ${{ github.repository }}"
+        echo "Branch: ${{ github.ref }}"
+        echo "Commit: ${{ github.sha }}"
+        echo "Run: ${{ github.run_id }}"
+        echo ""
+        
+        if [ -f "bin/projectmind-1.0.0-release.apk" ]; then
+          APK_SIZE=$(du -h bin/projectmind-1.0.0-release.apk | cut -f1)
+          echo "APK Status: SUCCESS"
+          echo "APK File: projectmind-1.0.0-release.apk"
+          echo "APK Size: $APK_SIZE"
+          echo ""
+          echo "Download from: GitHub Actions > Artifacts"
+          echo "Install command: adb install -r projectmind-1.0.0-release.apk"
+        else
+          echo "APK Status: NOT CREATED"
+          echo "Check logs above for build errors"
+        fi
+        
+        echo ""
+        echo "======================================="
+        echo "Build Time: $(date)"
+        echo "======================================="
+
+# ============================================================================
+# END OF WORKFLOW
+# ============================================================================

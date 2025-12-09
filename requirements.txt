@@ -1,7 +1,16 @@
-# Project Mind APK Build Requirements
-buildozer==1.5.0
-cython==0.29.33
+# Project Mind Requirements
+
+# Core dependencies
 kivy==2.1.0
+cython==0.29.33
 pillow
+
+# Build dependencies
+buildozer==1.5.0
 setuptools
 wheel
+
+# Backend dependencies
+flask
+requests
+numpy
