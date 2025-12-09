@@ -1,0 +1,91 @@
+PROJECT MIND - WSL2 BUILD INSTRUCTIONS
+========================================
+
+Since WSL2 is not installed, follow these steps:
+
+STEP 1: INSTALL WSL2
+========================================
+
+1. Open PowerShell as Administrator
+2. Run this command:
+
+   wsl --install -d Ubuntu
+
+3. After it completes, RESTART YOUR COMPUTER
+4. It will complete setup on next boot (may take 5-10 minutes)
+5. Create username and password when prompted
+
+Once Ubuntu is set up, proceed to STEP 2
+
+
+STEP 2: BUILD THE APK IN WSL2
+========================================
+
+1. Open PowerShell (normal, not admin needed)
+2. Type: wsl
+3. This opens Ubuntu terminal
+
+4. Copy and paste this ENTIRE command block:
+
+   sudo apt-get update && sudo apt-get upgrade -y && \
+   sudo apt-get install -y python3 python3-pip openjdk-11-jdk-headless build-essential git libssl-dev libffi-dev libxml2-dev libxslt1-dev libjpeg-dev zlib1g-dev && \
+   pip install buildozer Cython==0.29.33 virtualenv && \
+   pip install kivy Pillow && \
+   cd /mnt/d/Project\ Mind && \
+   buildozer android release
+
+5. Wait for completion (15-30 minutes for first build)
+6. APK will be at: d:\Project Mind\bin\projectmind-1.0.0-release.apk
+
+
+ALTERNATIVE: Use Docker (FASTER, NO SETUP)
+========================================
+
+If you want to skip WSL2 setup, use Docker instead:
+
+1. Install Docker Desktop from: https://www.docker.com/products/docker-desktop
+2. Run:
+   cd d:\Project\ Mind
+   docker-compose up
+3. APK created at: d:\Project Mind\bin\projectmind-1.0.0-release.apk
+
+
+ALTERNATIVE 2: Use GitHub Actions (CLOUD BUILD, EASIEST)
+========================================
+
+1. Push this project to GitHub
+2. Actions automatically builds APK
+3. Download from workflow artifacts
+4. No local setup required!
+
+
+AFTER GETTING APK
+========================================
+
+Install on Android device:
+
+1. Enable USB Debugging on device (Settings → Developer Options)
+2. Connect device via USB
+3. In PowerShell, run:
+
+   adb install -r "d:\Project Mind\bin\projectmind-1.0.0-release.apk"
+
+4. Launch app on device
+
+
+TROUBLESHOOTING
+========================================
+
+"wsl command not found":
+- Windows 10/11 Build 18917 or later required
+- May need to enable Hyper-V and virtualization in BIOS
+
+"Docker: file not found after build":
+- Docker takes longer first time
+- Wait for "successfully built" message
+- Check that docker-compose.yml exists
+
+"APK installation fails":
+- Ensure Android 13+ on device
+- Enable USB Debugging (Settings → Developer)
+- Try: adb devices (to verify connection)

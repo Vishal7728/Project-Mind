@@ -1,0 +1,62 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Set up Java
+      uses: actions/setup-java@v3
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install buildozer Cython==0.29.33 virtualenv
+        pip install kivy Pillow
+    
+    - name: Build APK
+      run: |
+        buildozer android release
+    
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: projectmind-apk
+        path: bin/projectmind-*.apk
+    
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+    
+    - name: Upload Release Asset
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./bin/projectmind-1.0.0-release.apk
+        asset_name: projectmind-1.0.0-release.apk
+        asset_content_type: application/vnd.android.package-archive

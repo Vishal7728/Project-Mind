@@ -1,0 +1,168 @@
+════════════════════════════════════════════════════════════════════════════════
+WSL2 BUILD GUIDE - COPY & PASTE STEPS
+════════════════════════════════════════════════════════════════════════════════
+
+STEP 1: INSTALL WSL2 (ONE TIME ONLY)
+════════════════════════════════════════════════════════════════════════════════
+
+1. Right-click PowerShell on taskbar
+2. Select "Run as Administrator"
+3. Copy and paste this ENTIRE line:
+
+   wsl --install -d Ubuntu
+
+4. Wait 5-10 minutes for installation to complete
+5. **RESTART YOUR COMPUTER**
+6. Ubuntu will complete setup on next boot (5-10 more minutes)
+7. Create username and password when prompted
+
+
+STEP 2: BUILD THE APK
+════════════════════════════════════════════════════════════════════════════════
+
+After Ubuntu is installed and set up:
+
+1. Open PowerShell (regular, not admin)
+2. Type: wsl
+   (This opens Ubuntu terminal inside PowerShell)
+
+3. Copy ENTIRE block below and paste into WSL2 terminal:
+
+────────────────────────────────────────────────────────────────────────────────
+sudo apt-get update && \
+sudo apt-get upgrade -y && \
+sudo apt-get install -y python3 python3-pip openjdk-11-jdk-headless build-essential git libssl-dev libffi-dev libxml2-dev libxslt1-dev libjpeg-dev zlib1g-dev && \
+pip install buildozer Cython==0.29.33 virtualenv && \
+pip install kivy Pillow && \
+cd /mnt/d/Project\ Mind && \
+buildozer android release
+────────────────────────────────────────────────────────────────────────────────
+
+4. Press Enter and WAIT
+
+   This will:
+   • Update Ubuntu packages
+   • Install Java JDK
+   • Install build tools
+   • Install Python packages
+   • Navigate to project
+   • BUILD THE APK
+
+   Estimated time: 15-30 minutes (first build is slower)
+
+
+STEP 3: GET YOUR APK
+════════════════════════════════════════════════════════════════════════════════
+
+After build completes successfully:
+
+Your APK is at:
+   d:\Project Mind\bin\projectmind-1.0.0-release.apk
+
+You should see: "Build successful! .apk at bin/..."
+
+
+STEP 4: INSTALL ON DEVICE
+════════════════════════════════════════════════════════════════════════════════
+
+1. Enable USB Debugging on Android device:
+   • Settings → About phone → Build Number (tap 7 times)
+   • Go back, find Developer Options
+   • Enable USB Debugging
+
+2. Connect device via USB cable
+
+3. In PowerShell, run:
+   adb install -r "d:\Project Mind\bin\projectmind-1.0.0-release.apk"
+
+4. Wait for installation to complete
+
+5. Launch app on device or run:
+   adb shell am start -n org.projectmind.projectmind/.PythonActivity
+
+
+════════════════════════════════════════════════════════════════════════════════
+WHAT IF...?
+════════════════════════════════════════════════════════════════════════════════
+
+"wsl --install: command not found"
+→ Need Windows 10 Build 18917+ or Windows 11
+→ Check: Settings → About → Build number
+→ Run Windows Update if needed
+
+"WSL installation fails"
+→ Enable Hyper-V:
+  • Windows 10 Pro: Ctrl+R → optionalfeatures → ✓ Hyper-V
+  • Windows 11: Settings → System → Optional features → Hyper-V
+→ Restart and try again
+
+"wsl: bash: command not found"
+→ Ubuntu not installed completely
+→ Try: wsl --install -d Ubuntu --no-launch
+→ Then: wsl
+
+"Build takes forever"
+→ NORMAL - first build downloads SDK (500MB+)
+→ Be patient, watch for progress
+→ Check internet connection
+→ Ensure 15GB+ free disk space
+
+"buildozer: command not found"
+→ pip install buildozer didn't work
+→ Try: pip install --upgrade buildozer
+
+"APK not created"
+→ Check output for errors (last 50 lines)
+→ Usually a dependency or permission issue
+→ Try: buildozer android clean first
+
+
+════════════════════════════════════════════════════════════════════════════════
+TROUBLESHOOTING COMMANDS
+════════════════════════════════════════════════════════════════════════════════
+
+Check Ubuntu is installed:
+   wsl --list --verbose
+
+Check Python in WSL2:
+   wsl python3 --version
+
+Check Buildozer in WSL2:
+   wsl python3 -m buildozer --version
+
+Clean build (if something went wrong):
+   cd /mnt/d/Project\ Mind
+   buildozer android clean
+   buildozer android release
+
+View build log:
+   cat .buildozer/android/platform/build/build.log
+
+
+════════════════════════════════════════════════════════════════════════════════
+EXPECTED OUTPUT
+════════════════════════════════════════════════════════════════════════════════
+
+When everything works, you'll see:
+
+[INFO] Build successful!
+[INFO] Create the APK at bin/projectmind-1.0.0-release.apk
+[INFO] Build finished in X minutes
+
+Then your APK is ready at:
+   d:\Project Mind\bin\projectmind-1.0.0-release.apk
+
+
+════════════════════════════════════════════════════════════════════════════════
+NEXT AFTER APK BUILD
+════════════════════════════════════════════════════════════════════════════════
+
+1. Find APK at: d:\Project Mind\bin\projectmind-1.0.0-release.apk
+2. Connect Android device
+3. Install: adb install -r [path to apk]
+4. Launch and enjoy!
+
+Questions? See: BUILD_APK_GUIDE.txt for more options
+
+
+════════════════════════════════════════════════════════════════════════════════

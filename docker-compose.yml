@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  buildozer:
+    build: .
+    container_name: projectmind-builder
+    volumes:
+      - .:/project
+    working_dir: /project
+    command: buildozer android release
+    environment:
+      - ANDROID_SKIP_UPDATE=1

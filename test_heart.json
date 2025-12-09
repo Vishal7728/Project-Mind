@@ -1,0 +1,55 @@
+{
+  "timestamp": "2025-12-08T22:20:29.092465",
+  "memory_entries": {},
+  "personality_traits": {
+    "helpfulness": {
+      "name": "helpfulness",
+      "value": 0.9,
+      "influences": []
+    },
+    "curiosity": {
+      "name": "curiosity",
+      "value": 0.8,
+      "influences": []
+    },
+    "empathy": {
+      "name": "empathy",
+      "value": 0.7,
+      "influences": []
+    },
+    "playfulness": {
+      "name": "playfulness",
+      "value": 0.6,
+      "influences": []
+    },
+    "caution": {
+      "name": "caution",
+      "value": 0.5,
+      "influences": []
+    },
+    "adaptability": {
+      "name": "adaptability",
+      "value": 0.8,
+      "influences": []
+    }
+  },
+  "emotional_profile": {
+    "trust_level": 0.5,
+    "affinity": 0.5,
+    "emotional_bond_strength": 0.0,
+    "dominant_emotion": "curious",
+    "shared_experiences": 0
+  },
+  "name_profile": {
+    "ai_name": null,
+    "user_name": null,
+    "naming_status": "unnamed",
+    "date_named": null,
+    "total_name_changes": 0,
+    "emotional_attachment_to_name": 0.0,
+    "use_name_in_greetings": true,
+    "use_name_in_conversations": true,
+    "use_user_name_in_responses": true
+  },
+  "persona_profile": null
+}
