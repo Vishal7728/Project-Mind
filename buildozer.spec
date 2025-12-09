@@ -24,9 +24,7 @@ android.archs = arm64-v8a,armeabi-v7a
 android.accept_sdk_license = True
 
 # Android Gradle Configuration
-android.gradle_options = org.gradle.jvmargs=-Xmx2048m
-android.gradle_options = org.gradle.caching=true
-android.gradle_options = org.gradle.workers.max=4
+android.gradle_options = org.gradle.jvmargs=-Xmx2048m,org.gradle.caching=true,org.gradle.workers.max=4
 
 # Python Requirements (CRITICAL: Cython must be 0.29.33)
 requirements = python3,kivy==2.1.0,pillow
