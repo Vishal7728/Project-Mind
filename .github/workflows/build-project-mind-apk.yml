@@ -61,35 +61,14 @@ jobs:
         JAVA_OPTS: -Xmx2048m
 
     # Setup Python (Required for Buildozer)
-    - name: Create pip cache directories
-      run: |
-        mkdir -p /tmp/pip-cache
-        mkdir -p /home/runner/.cache/pip || echo "Could not create default pip cache directory"
-    
+    - name: Create pip cache directory if missing
+      run: mkdir -p /home/runner/.cache/pip
+
     - name: Set up Python 3.11
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-      env:
-        PIP_CACHE_DIR: /tmp/pip-cache
-
-    # Configure pip cache directory
-    - name: Configure pip cache directory
-      run: |
-        echo "Configuring pip cache directory:"
-        pip config set global.cache-dir /tmp/pip-cache
-        pip config set global.no-cache-dir false
-        echo "Cache directory configured"
-
-    # Verify pip cache directory
-    - name: Verify pip cache directory
-      run: |
-        echo "Checking pip cache directory setup:"
-        echo "PIP_CACHE_DIR: $PIP_CACHE_DIR"
-        ls -la /tmp/pip-cache 2>/dev/null || echo "/tmp/pip-cache not found"
-        ls -la /home/runner/.cache/pip 2>/dev/null || echo "/home/runner/.cache/pip not found"
-        pip config debug || echo "pip config debug failed"
-        pip config list | grep cache || echo "No cache config found"
+        cache: pip
 
     # Install Android SDK Components
     - name: Install Android SDK Components
