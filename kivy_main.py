@@ -39,7 +39,6 @@ class ProjectMindApp(App):
             )
             
             self.project_mind = ProjectMind(phone_specs)
-            self.project_mind.initialize()
             
         except Exception as e:
             print(f"Error initializing ProjectMind: {e}")
@@ -104,11 +103,11 @@ class ProjectMindApp(App):
             return "Initializing..."
         
         try:
-            status = self.project_mind.get_status()
-            emotion = status.get('emotion', 'neutral') if status else 'neutral'
-            age = status.get('age_days', 0) if status else 0
-            trust = status.get('trust_level', 0.5) if status else 0.5
-            return f"[b]AI Status:[/b]\nAge: {age} days\nEmotion: {emotion}\nTrust: {trust:.2f}"
+            status = self.project_mind.get_ai_status()
+            emotion = status.get('personality', {}).get('current_emotion', 'neutral')
+            lifecycle = status.get('lifecycle', {}).get('current_stage', 'startup')
+            trust = status.get('personality', {}).get('trust_level', 0.5)
+            return f"[b]AI Status:[/b]\nStage: {lifecycle}\nEmotion: {emotion}\nTrust: {trust:.2f}"
         except Exception as e:
             return f"Status: Ready"
     
