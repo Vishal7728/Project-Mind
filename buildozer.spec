@@ -14,8 +14,8 @@ android.minapi = 33
 android.ndk = 25b
 android.archs = arm64-v8a,armeabi-v7a
 android.accept_sdk_license = True
-android.logcat_filters = *:S python:D
 android.entrypoint = org.renpy.android.PythonActivity
+android.gradle_options = org.gradle.jvmargs=-Xmx1024m
 
 [buildozer]
 log_level = 2
