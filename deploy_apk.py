@@ -49,7 +49,7 @@ def check_java():
         if result.returncode == 0:
             print("✓ Java JDK installed")
             return True
-    except:
+    except (FileNotFoundError, subprocess.CalledProcessError):
         pass
     
     print("✗ Java JDK not found")
