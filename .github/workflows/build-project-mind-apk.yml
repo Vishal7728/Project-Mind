@@ -223,6 +223,9 @@ jobs:
         echo "================================"
         if [ $BUILD_EXIT -eq 0 ]; then
           echo "BUILD SUCCESSFUL"
+          echo "Checking for APK generation indicators in build log:"
+          grep -i "BUILD SUCCESSFUL" build.log || echo "No explicit success message found"
+          grep -i "apk" build.log | tail -10 || echo "No APK references found in build log"
         else
           echo "BUILD FAILED - Exit code: $BUILD_EXIT"
           echo "Showing last 100 lines of build log:"
@@ -279,6 +282,15 @@ jobs:
         echo "Full directory structure around APKs:"
         find . -path "./.git" -prune -o -name "*.apk" -type f -exec dirname {} \; 2>/dev/null | xargs -I {} ls -la {} 2>/dev/null || echo "No directories with APKs found"
     
+    # Copy APK files to known location for artifact upload
+    - name: Copy APK Files to Artifact Directory
+      if: always()
+      run: |
+        echo "Copying APK files to artifact directory..."
+        mkdir -p apk_artifacts
+        find . -name "*.apk" -type f -exec cp {} apk_artifacts/ \; 2>/dev/null || echo "No APK files to copy"
+        ls -la apk_artifacts/ 2>/dev/null || echo "Artifact directory not created or empty"
+    
     # List Build Directory
     - name: List Build Output
       if: always()
@@ -303,6 +315,8 @@ jobs:
           .buildozer/**/*release*.apk
           .buildozer/**/*debug*.apk
           bin/**/*.apk
+          */*.apk
+          apk_artifacts/*.apk
         retention-days: 30
         if-no-files-found: warn
 
@@ -317,6 +331,8 @@ jobs:
           .buildozer/**/*release*.apk
           .buildozer/**/*debug*.apk
           bin/**/*.apk
+          */*.apk
+          apk_artifacts/*.apk
         draft: false
         prerelease: false
       env:
