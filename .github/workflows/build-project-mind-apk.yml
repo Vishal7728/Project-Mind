@@ -51,7 +51,6 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: gradle
       env:
         JAVA_OPTS: -Xmx2048m
 
