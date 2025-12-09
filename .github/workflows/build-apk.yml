@@ -1,81 +1,127 @@
-name: Build APK
+name: Build APK - Production
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
   workflow_dispatch:
 
+env:
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+  ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/25.1.8387110
+  GRADLE_USER_HOME: ~/.gradle
+  GRADLE_OPTS: -Xmx2048m -XX:MaxPermSize=512m
+
 jobs:
-  build-apk:
+  validate:
+    name: Validate Project Setup
     runs-on: ubuntu-latest
-    
     steps:
-    - uses: actions/checkout@v3
-    
+    - uses: actions/checkout@v4
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
+        cache: 'pip'
+
+    - name: Run Build Validation
+      run: python validate_build.py
+
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    needs: validate
+    timeout-minutes: 60
     
-    - name: Set up Java
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Java 17
       uses: actions/setup-java@v3
       with:
-        java-version: '11'
+        java-version: '17'
         distribution: 'temurin'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install buildozer Cython==0.29.33 virtualenv
-        pip install kivy Pillow
-        sudo apt-get update
-        sudo apt-get install -y openjdk-11-jdk-headless
+        cache: gradle
+      env:
+        JAVA_OPTS: -Xmx2048m
 
-    - name: Verify Build Environment
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install Android SDK Components
       run: |
-        echo "=== Python Version ==="
-        python --version
-        echo "=== Java Version ==="
+        mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
+        if [ ! -d "$ANDROID_SDK_ROOT/cmdline-tools/latest" ]; then
+          cd $ANDROID_SDK_ROOT/cmdline-tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip
+          unzip -q commandlinetools-linux-10406996_latest.zip
+          mv cmdline-tools latest
+          rm commandlinetools-linux-10406996_latest.zip
+        fi
+        export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
+        yes | sdkmanager --licenses 2>/dev/null || true
+        sdkmanager --install "platforms;android-33" 2>&1 | grep -i "installed" || true
+        sdkmanager --install "build-tools;33.0.0" 2>&1 | grep -i "installed" || true
+        sdkmanager --install "platform-tools" 2>&1 | grep -i "installed" || true
+        sdkmanager --install "ndk;25.1.8387110" 2>&1 | grep -i "installed" || true
+
+    - name: Verify Environment
+      run: |
         java -version
-        echo "=== Buildozer Version ==="
-        buildozer --version
-        echo "=== Project Files ==="
-        ls -la | head -20
-        echo "=== Source Directory ==="
-        ls -la src/ | head -10
-        echo "=== Buildozer Spec ==="
-        head -20 buildozer.spec
-    
-    - name: Build APK
+        python --version
+        test -f buildozer.spec && echo "buildozer.spec found" || echo "ERROR: buildozer.spec missing"
+
+    - name: Cache Gradle
+      uses: actions/cache@v3
+      with:
+        path: ~/.gradle/caches
+        key: gradle-${{ runner.os }}-api-33
+        restore-keys: gradle-${{ runner.os }}-
+
+    - name: Cache Android SDK
+      uses: actions/cache@v3
+      with:
+        path: /usr/local/lib/android/sdk
+        key: android-sdk-api-33-ndk-25b
+        restore-keys: android-sdk-
+
+    - name: Install Build Dependencies
       run: |
-        mkdir -p bin
-        buildozer android release
-      timeout-minutes: 45
-    
-    - name: Upload APK
+        python -m pip install --upgrade pip setuptools wheel
+        python -m pip install Cython==0.29.33
+        python -m pip install buildozer kivy pillow
+
+    - name: Clean Previous Builds
+      run: buildozer android clean
+
+    - name: Build Release APK
+      run: buildozer android release 2>&1 | tee build.log
+
+    - name: Verify APK
+      run: test -f bin/projectmind-1.0.0-release.apk && echo "APK created successfully" || exit 1
+
+    - name: Upload APK Artifact
+      if: success()
       uses: actions/upload-artifact@v3
       with:
-        name: projectmind-apk
+        name: projectmind-apk-${{ github.run_number }}
         path: bin/projectmind-*.apk
-    
-    - name: Create Release
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        draft: false
-        prerelease: false
-    
-    - name: Upload Release Asset
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./bin/projectmind-1.0.0-release.apk
-        asset_name: projectmind-1.0.0-release.apk
-        asset_content_type: application/vnd.android.package-archive
+        retention-days: 30
+
+    - name: Build Summary
+      if: always()
+      run: |
+        if [ -f "bin/projectmind-1.0.0-release.apk" ]; then
+          echo "APK Status: SUCCESS"
+          du -h bin/projectmind-1.0.0-release.apk
+        else
+          echo "APK Status: FAILED"
+        fi
