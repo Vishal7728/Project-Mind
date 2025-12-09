@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.main import ProjectMind
 from src.types import PhoneSpecifications, EmotionalState
+from src.presentation.persona_engine import PersonalityArchetype
 
 Window.size = (400, 800)
 
@@ -42,6 +43,8 @@ class ProjectMindApp(App):
             
         except Exception as e:
             print(f"Error initializing ProjectMind: {e}")
+            import traceback
+            traceback.print_exc()
             self.project_mind = None
         
         main_layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
@@ -55,7 +58,10 @@ class ProjectMindApp(App):
         main_layout.add_widget(title_label)
         
         face_container = BoxLayout(size_hint_y=0.4, padding=5)
-        face_placeholder = Label(text="[AI Face Display Area]", color=(0.2, 0.6, 0.8, 1))
+        face_placeholder = Label(
+            text="[AI Face Display Area]",
+            color=(0.2, 0.6, 0.8, 1)
+        )
         face_container.add_widget(face_placeholder)
         main_layout.add_widget(face_container)
         
@@ -104,15 +110,27 @@ class ProjectMindApp(App):
         
         try:
             status = self.project_mind.get_ai_status()
-            emotion = status.get('personality', {}).get('current_emotion', 'neutral')
-            lifecycle = status.get('lifecycle', {}).get('current_stage', 'startup')
-            trust = status.get('personality', {}).get('trust_level', 0.5)
-            return f"[b]AI Status:[/b]\nStage: {lifecycle}\nEmotion: {emotion}\nTrust: {trust:.2f}"
+            
+            emotional_status = status.get('personality', {})
+            current_emotion = emotional_status.get('current_emotion', 'NEUTRAL')
+            trust_level = emotional_status.get('trust_level', 0.5)
+            
+            lifecycle_status = status.get('lifecycle', {})
+            lifecycle_stage = lifecycle_status.get('current_stage', 'STARTUP')
+            
+            return (
+                f"[b]AI Status:[/b]\n"
+                f"Stage: {lifecycle_stage}\n"
+                f"Emotion: {current_emotion}\n"
+                f"Trust: {trust_level:.2f}"
+            )
         except Exception as e:
-            return f"Status: Ready"
+            print(f"Error getting status: {e}")
+            return "Status: Initializing..."
     
     def update_status(self, dt):
-        self.status_label.text = self.get_status_text()
+        if self.status_label:
+            self.status_label.text = self.get_status_text()
     
     def show_naming_dialog(self, instance):
         if not self.project_mind:
@@ -120,12 +138,17 @@ class ProjectMindApp(App):
         
         content = BoxLayout(orientation='vertical', spacing=10, padding=10)
         
+        ai_name = 'Mind'
+        user_name = ''
+        
         try:
-            ai_name = self.project_mind.heart.profile.get('ai_name', 'Mind') if self.project_mind.heart else 'Mind'
-            user_name = self.project_mind.heart.profile.get('user_name', '') if self.project_mind.heart else ''
-        except:
-            ai_name = 'Mind'
-            user_name = ''
+            if self.project_mind.heart and hasattr(self.project_mind.heart, 'profile'):
+                profile = self.project_mind.heart.profile
+                if isinstance(profile, dict):
+                    ai_name = profile.get('ai_name', 'Mind')
+                    user_name = profile.get('user_name', '')
+        except Exception as e:
+            print(f"Error reading names: {e}")
         
         ai_name_input = TextInput(
             text=ai_name,
@@ -147,12 +170,15 @@ class ProjectMindApp(App):
         
         def save_names(btn):
             try:
-                if self.project_mind.heart:
-                    if ai_name_input.text:
-                        self.project_mind.heart.profile['ai_name'] = ai_name_input.text
-                    if user_name_input.text:
-                        self.project_mind.heart.profile['user_name'] = user_name_input.text
-                    self.project_mind.heart.save()
+                if self.project_mind.heart and hasattr(self.project_mind.heart, 'profile'):
+                    profile = self.project_mind.heart.profile
+                    if isinstance(profile, dict):
+                        if ai_name_input.text.strip():
+                            profile['ai_name'] = ai_name_input.text.strip()
+                        if user_name_input.text.strip():
+                            profile['user_name'] = user_name_input.text.strip()
+                        if hasattr(self.project_mind.heart, 'save'):
+                            self.project_mind.heart.save()
             except Exception as e:
                 print(f"Error saving names: {e}")
             finally:
@@ -181,23 +207,42 @@ class ProjectMindApp(App):
         
         content = BoxLayout(orientation='vertical', spacing=10, padding=10)
         
-        content.add_widget(Label(text="Persona Customization", size_hint_y=0.1, bold=True))
+        content.add_widget(Label(
+            text="Persona Customization",
+            size_hint_y=0.1,
+            bold=True
+        ))
         
         scroll = ScrollView()
         scroll_layout = GridLayout(cols=1, spacing=5, size_hint_y=None)
         scroll_layout.bind(minimum_height=scroll_layout.setter('height'))
         
-        archetype_label = Label(text="Select Archetype:", size_hint_y=None, height=40)
+        archetype_label = Label(
+            text="Select Personality Archetype:",
+            size_hint_y=None,
+            height=40
+        )
         scroll_layout.add_widget(archetype_label)
         
-        archetypes = ["WISE_MENTOR", "SUPPORTIVE_FRIEND", "PLAYFUL_COMPANION", 
-                      "PROFESSIONAL_ADVISOR", "ARTISTIC_CREATIVE", "LOGICAL_ANALYST",
-                      "ADVENTUROUS_EXPLORER", "NURTURING_CAREGIVER", "MYSTICAL_GUIDE"]
+        archetypes = [
+            ('FRIENDLY', 'Friendly'),
+            ('SERIOUS', 'Serious'),
+            ('PLAYFUL', 'Playful'),
+            ('CALM', 'Calm'),
+            ('ENERGETIC', 'Energetic'),
+            ('WISE', 'Wise'),
+            ('PROTECTIVE', 'Protective'),
+            ('CURIOUS', 'Curious'),
+            ('NEUTRAL', 'Neutral'),
+        ]
         
-        for archetype in archetypes:
-            btn = Button(text=archetype.replace('_', ' '), size_hint_y=None, height=40)
-            btn.archetype_val = archetype
-            btn.bind(on_press=self.create_persona_callback(archetype))
+        for archetype_key, archetype_label_text in archetypes:
+            btn = Button(
+                text=archetype_label_text,
+                size_hint_y=None,
+                height=40
+            )
+            btn.bind(on_press=lambda x, k=archetype_key: self.set_persona_archetype(k))
             scroll_layout.add_widget(btn)
         
         scroll.add_widget(scroll_layout)
@@ -216,20 +261,28 @@ class ProjectMindApp(App):
         )
         popup.open()
     
-    def create_persona_callback(self, archetype):
-        def callback(instance):
-            self.set_persona_archetype(archetype)
-        return callback
-    
-    def set_persona_archetype(self, archetype):
+    def set_persona_archetype(self, archetype_key):
         if not self.project_mind:
             return
         
         try:
             if hasattr(self.project_mind, 'persona_engine') and self.project_mind.persona_engine:
-                self.project_mind.persona_engine.set_archetype(archetype)
+                persona_engine = self.project_mind.persona_engine
+                
+                try:
+                    archetype_enum = PersonalityArchetype[archetype_key]
+                except KeyError:
+                    archetype_enum = PersonalityArchetype.NEUTRAL
+                
+                if hasattr(persona_engine, 'persona_behavior'):
+                    persona_engine.persona_behavior.primary_archetype = archetype_enum
+                    persona_engine.is_persona_set = True
+                    
+                    print(f"Persona archetype set to: {archetype_enum.value}")
         except Exception as e:
             print(f"Error setting persona: {e}")
+            import traceback
+            traceback.print_exc()
     
     def show_voice_dialog(self, instance):
         if not self.project_mind:
@@ -237,17 +290,30 @@ class ProjectMindApp(App):
         
         content = BoxLayout(orientation='vertical', spacing=10, padding=10)
         
-        content.add_widget(Label(text="Voice Configuration", size_hint_y=0.1, bold=True))
+        content.add_widget(Label(
+            text="Voice Configuration",
+            size_hint_y=0.1,
+            bold=True
+        ))
+        
+        voice_info = "Voice Stage: 1/5\nEvolving with interactions..."
         
         try:
-            voice_stage = self.project_mind.heart.profile.get('voice_stage', 1) if self.project_mind.heart else 1
-            info_text = f"Voice Stage: {voice_stage}/5\nEvolving with interactions..."
-        except:
-            info_text = "Voice Stage: 1/5\nEvolving with interactions..."
+            if self.project_mind.heart and hasattr(self.project_mind.heart, 'profile'):
+                profile = self.project_mind.heart.profile
+                if isinstance(profile, dict):
+                    voice_stage = profile.get('voice_stage', 1)
+                    voice_info = f"Voice Stage: {voice_stage}/5\nEvolving with interactions..."
+        except Exception as e:
+            print(f"Error reading voice info: {e}")
         
-        content.add_widget(Label(text=info_text, size_hint_y=0.3))
+        content.add_widget(Label(
+            text=voice_info,
+            size_hint_y=0.3
+        ))
         
         button_layout = BoxLayout(size_hint_y=0.2, spacing=5)
+        
         test_btn = Button(text="Test Voice")
         test_btn.bind(on_press=self.test_voice)
         button_layout.add_widget(test_btn)
@@ -255,6 +321,7 @@ class ProjectMindApp(App):
         close_btn = Button(text="Close")
         close_btn.bind(on_press=lambda x: popup.dismiss())
         button_layout.add_widget(close_btn)
+        
         content.add_widget(button_layout)
         
         popup = Popup(
@@ -269,11 +336,26 @@ class ProjectMindApp(App):
             return
         
         try:
-            self.project_mind.voice_engine.synthesize_speech(
-                "Hello! I am Project Mind, your personal AI companion!"
-            )
+            if hasattr(self.project_mind, 'voice_engine') and self.project_mind.voice_engine:
+                voice_engine = self.project_mind.voice_engine
+                
+                if hasattr(voice_engine, 'synthesize_speech'):
+                    speech_text = "Hello! I am Project Mind, your personal AI companion!"
+                    
+                    voice_engine.synthesize_speech(
+                        speech_text,
+                        None
+                    )
+                    print("Voice synthesis initiated")
+        except TypeError:
+            try:
+                voice_engine.synthesize_speech("Hello! I am Project Mind, your personal AI companion!")
+            except Exception as e:
+                print(f"Error in voice synthesis: {e}")
         except Exception as e:
             print(f"Error in voice synthesis: {e}")
+            import traceback
+            traceback.print_exc()
     
     def show_emotion_dialog(self, instance):
         if not self.project_mind:
@@ -281,15 +363,26 @@ class ProjectMindApp(App):
         
         content = BoxLayout(orientation='vertical', spacing=10, padding=10)
         
-        content.add_widget(Label(text="Select Emotion:", size_hint_y=0.1, bold=True))
+        content.add_widget(Label(
+            text="Select Emotion:",
+            size_hint_y=0.1,
+            bold=True
+        ))
         
-        emotions = ["HAPPY", "EXCITED", "CALM", "CONCERNED", "CURIOUS", "PROTECTIVE"]
+        emotions = [
+            "HAPPY",
+            "EXCITED",
+            "CALM",
+            "CONCERNED",
+            "CURIOUS",
+            "PROTECTIVE"
+        ]
+        
         button_layout = GridLayout(cols=2, spacing=5, size_hint_y=0.6)
         
         for emotion in emotions:
             btn = Button(text=emotion)
-            btn.emotion_val = emotion
-            btn.bind(on_press=self.create_emotion_callback(emotion))
+            btn.bind(on_press=lambda x, e=emotion: self.show_emotion(e))
             button_layout.add_widget(btn)
         
         content.add_widget(button_layout)
@@ -305,24 +398,33 @@ class ProjectMindApp(App):
         )
         popup.open()
     
-    def create_emotion_callback(self, emotion_name):
-        def callback(instance):
-            self.show_emotion(emotion_name)
-        return callback
-    
     def show_emotion(self, emotion_name):
         if not self.project_mind:
             return
         
         try:
             if hasattr(EmotionalState, emotion_name):
-                emotion = getattr(EmotionalState, emotion_name)
+                emotion_enum = getattr(EmotionalState, emotion_name)
+                
                 if hasattr(self.project_mind, 'personality_engine') and self.project_mind.personality_engine:
-                    self.project_mind.personality_engine.set_emotion(emotion)
+                    personality_engine = self.project_mind.personality_engine
+                    
+                    if hasattr(personality_engine, 'update_emotion'):
+                        personality_engine.update_emotion(emotion_enum)
+                        print(f"Emotion updated to: {emotion_name}")
+                
                 if hasattr(self.project_mind, 'gui_engine') and self.project_mind.gui_engine:
-                    self.project_mind.gui_engine.update_facial_expression(emotion)
+                    gui_engine = self.project_mind.gui_engine
+                    
+                    if hasattr(gui_engine, 'update_facial_expression'):
+                        gui_engine.update_facial_expression(emotion_enum)
+                        print(f"Facial expression updated to: {emotion_name}")
+        except AttributeError as e:
+            print(f"Emotion not found: {emotion_name} - {e}")
         except Exception as e:
             print(f"Error updating emotion: {e}")
+            import traceback
+            traceback.print_exc()
 
 
 if __name__ == '__main__':
