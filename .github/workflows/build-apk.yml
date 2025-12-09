@@ -27,7 +27,7 @@ jobs:
         cache: 'pip'
 
     - name: Run Build Validation
-      run: python validate_build.py
+      run: python scripts/validate_build.py
 
   build-apk:
     name: Build Android APK
