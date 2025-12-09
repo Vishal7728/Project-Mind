@@ -7,7 +7,7 @@ package.domain = org.projectmind
 version = 1.0.0
 
 # Source and Build Settings
-source.dir = .
+source.dir = app/src
 source.include_exts = py,png,jpg,jpeg,kv,atlas,json,txt,md
 source.exclude_exts = spec,pyc,pyo,pyd,so,exe
 
@@ -27,7 +27,7 @@ android.accept_sdk_license = True
 android.gradle_options = org.gradle.jvmargs=-Xmx2048m,org.gradle.caching=true,org.gradle.workers.max=4
 
 # Python Requirements (CRITICAL: Cython must be 0.29.33)
-requirements = python3,kivy==2.1.0,pillow
+requirements = python3,kivy==2.1.0,cython==0.29.33,pillow,numpy,flask,requests,setuptools,wheel
 
 # Android App Entry Point
 android.entrypoint = org.kivy.android.PythonActivity

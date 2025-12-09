@@ -67,6 +67,8 @@ jobs:
           echo "ERROR: buildozer.spec not found in root or scripts directory"
           exit 1
         fi
+        # Also copy the app directory structure to ensure all files are available
+        ls -la app/src/
 
     - name: Build Release APK with Buildozer
       run: |
