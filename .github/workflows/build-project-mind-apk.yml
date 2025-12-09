@@ -151,19 +151,23 @@ jobs:
     # Cache Gradle (Speed up builds)
     - name: Cache Gradle Files
       uses: actions/cache@v4
+      continue-on-error: true
       with:
         path: ~/.gradle/caches
-        key: gradle-${{ runner.os }}-project-mind
+        key: gradle-${{ runner.os }}-project-mind-${{ github.run_id }}
         restore-keys: |
+          gradle-${{ runner.os }}-project-mind-
           gradle-${{ runner.os }}-
 
     # Cache Android SDK (Speed up builds)
     - name: Cache Android SDK
       uses: actions/cache@v4
+      continue-on-error: true
       with:
         path: /usr/local/lib/android/sdk
-        key: android-sdk-${{ runner.os }}-api-33-ndk-25b
+        key: android-sdk-${{ runner.os }}-api-33-ndk-25b-${{ github.run_id }}
         restore-keys: |
+          android-sdk-${{ runner.os }}-api-33-ndk-25b-
           android-sdk-${{ runner.os }}-
 
     # Install Buildozer and Dependencies
