@@ -227,9 +227,8 @@ class ProjectMindApp(App):
             return
         
         try:
-            from src.types import PersonaProfile
-            profile = PersonaProfile(archetype=archetype)
-            self.project_mind.persona_engine.apply_persona(profile)
+            if hasattr(self.project_mind, 'persona_engine') and self.project_mind.persona_engine:
+                self.project_mind.persona_engine.set_archetype(archetype)
         except Exception as e:
             print(f"Error setting persona: {e}")
     
@@ -271,7 +270,7 @@ class ProjectMindApp(App):
             return
         
         try:
-            self.project_mind.voice_evolution_engine.synthesize_speech(
+            self.project_mind.voice_engine.synthesize_speech(
                 "Hello! I am Project Mind, your personal AI companion!"
             )
         except Exception as e:
@@ -319,8 +318,10 @@ class ProjectMindApp(App):
         try:
             if hasattr(EmotionalState, emotion_name):
                 emotion = getattr(EmotionalState, emotion_name)
-                self.project_mind.emotion_engine.update_emotion(emotion)
-                self.project_mind.gui_engine.update_facial_expression(emotion)
+                if hasattr(self.project_mind, 'personality_engine') and self.project_mind.personality_engine:
+                    self.project_mind.personality_engine.set_emotion(emotion)
+                if hasattr(self.project_mind, 'gui_engine') and self.project_mind.gui_engine:
+                    self.project_mind.gui_engine.update_facial_expression(emotion)
         except Exception as e:
             print(f"Error updating emotion: {e}")
 
