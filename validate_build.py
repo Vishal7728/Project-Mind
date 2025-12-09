@@ -8,6 +8,7 @@ import os
 import sys
 import ast
 import json
+import re
 from pathlib import Path
 
 class BuildValidator:
@@ -27,6 +28,7 @@ class BuildValidator:
         self.check_data_files()
         self.check_imports()
         self.check_android_specific()
+        self.check_kivy_main()
         
         self.print_report()
         return len(self.errors) == 0
@@ -36,7 +38,7 @@ class BuildValidator:
         print("\n1. Validating Python files...")
         
         for root, dirs, files in os.walk('.'):
-            dirs[:] = [d for d in dirs if d not in ['__pycache__', '.git', '.github', 'bin', 'data']]
+            dirs[:] = [d for d in dirs if d not in ['__pycache__', '.git', '.github', 'bin', 'data', '.buildozer']]
             
             for file in files:
                 if file.endswith('.py'):
@@ -84,7 +86,6 @@ class BuildValidator:
             self.warnings.append("Found android.logcat_filters - consider removing for build stability")
         
         # Validate API levels
-        import re
         api_match = re.search(r'android.api = (\d+)', spec_content)
         minapi_match = re.search(r'android.minapi = (\d+)', spec_content)
         
@@ -95,6 +96,14 @@ class BuildValidator:
                 self.errors.append("minapi cannot be greater than api")
             else:
                 self.info.append(f"API levels OK: api={api}, minapi={minapi}")
+        
+        # Check entry point
+        if 'org.kivy.android.PythonActivity' in spec_content:
+            self.info.append("Android: Kivy PythonActivity entry point configured")
+        elif 'org.renpy.android.PythonActivity' in spec_content:
+            self.warnings.append("Using renpy PythonActivity - consider switching to kivy PythonActivity")
+        else:
+            self.errors.append("Unknown Android entry point")
     
     def check_data_files(self):
         """Check required data files"""
@@ -147,28 +156,71 @@ class BuildValidator:
         """Check Android-specific issues"""
         print("\n5. Checking Android configuration...")
         
+        if not os.path.exists('buildozer.spec'):
+            self.errors.append("buildozer.spec not found!")
+            return
+            
         with open('buildozer.spec', 'r') as f:
             spec = f.read()
         
         # Check architecture support
-        if 'arm64-v8a' in spec or 'armeabi-v7a' in spec:
+        if 'arm64-v8a' in spec and 'armeabi-v7a' in spec:
             self.info.append("Android: 32/64-bit architecture support configured")
+        elif 'arm64-v8a' in spec:
+            self.info.append("Android: 64-bit architecture support configured")
+        elif 'armeabi-v7a' in spec:
+            self.info.append("Android: 32-bit architecture support configured")
         else:
-            self.warnings.append("Only one architecture configured - consider adding both 32 and 64-bit")
+            self.warnings.append("No ARM architectures configured")
         
         # Check permissions
         if 'permissions' in spec:
-            import re
             perms = re.search(r'permissions = (.+)', spec)
             if perms:
                 perm_list = perms.group(1).split(',')
                 self.info.append(f"Android: {len(perm_list)} permissions configured")
         
-        # Check entry point
-        if 'org.renpy.android.PythonActivity' in spec:
-            self.info.append("Android: PythonActivity entry point configured")
-        else:
-            self.warnings.append("Unknown Android entry point")
+        # Check requirements
+        if 'requirements' in spec:
+            reqs = re.search(r'requirements = (.+)', spec)
+            if reqs:
+                req_list = reqs.group(1).split(',')
+                self.info.append(f"Python requirements: {len(req_list)} packages")
+                
+                # Check for specific requirements
+                if 'kivy' in reqs.group(1):
+                    self.info.append("Kivy requirement found")
+                else:
+                    self.errors.append("Kivy not found in requirements")
+    
+    def check_kivy_main(self):
+        """Check kivy_main.py file"""
+        print("\n6. Checking kivy_main.py...")
+        
+        if not os.path.exists('kivy_main.py'):
+            self.errors.append("kivy_main.py not found!")
+            return
+        
+        try:
+            with open('kivy_main.py', 'r') as f:
+                content = f.read()
+            
+            # Check for App class
+            if 'class ProjectMindApp(App)' in content:
+                self.info.append("ProjectMindApp class found")
+            else:
+                self.errors.append("ProjectMindApp class not found in kivy_main.py")
+            
+            # Check for build method
+            if 'def build(self)' in content:
+                self.info.append("build() method found")
+            else:
+                self.errors.append("build() method not found in kivy_main.py")
+                
+            self.info.append(f"kivy_main.py: {len(content)} characters")
+            
+        except Exception as e:
+            self.errors.append(f"Error reading kivy_main.py: {str(e)}")
     
     def print_report(self):
         """Print validation report"""
@@ -178,10 +230,10 @@ class BuildValidator:
         
         if self.info:
             print(f"\nInfo ({len(self.info)} items):")
-            for msg in self.info[-10:]:  # Show last 10
+            for msg in self.info[-15:]:  # Show last 15
                 print(f"  [OK] {msg}")
-            if len(self.info) > 10:
-                print(f"  ... and {len(self.info)-10} more")
+            if len(self.info) > 15:
+                print(f"  ... and {len(self.info)-15} more")
         
         if self.warnings:
             print(f"\nWarnings ({len(self.warnings)} items):")
