@@ -24,10 +24,16 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Create pip cache directory
+      run: |
+        mkdir -p /tmp/pip-cache
+    
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
+      env:
+        PIP_CACHE_DIR: /tmp/pip-cache
 
     - name: Run Build Validation
       run: |
@@ -55,10 +61,16 @@ jobs:
         JAVA_OPTS: -Xmx2048m
 
     # Setup Python (Required for Buildozer)
+    - name: Create pip cache directory
+      run: |
+        mkdir -p /tmp/pip-cache
+    
     - name: Set up Python 3.11
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
+      env:
+        PIP_CACHE_DIR: /tmp/pip-cache
 
     # Install Android SDK Components
     - name: Install Android SDK Components
