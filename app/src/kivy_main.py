@@ -13,10 +13,12 @@ from kivy.uix.scrollview import ScrollView
 
 import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# Add parent directory (app/) to path to allow imports from app/src
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 from src.main import ProjectMind
-from src.types import PhoneSpecifications, EmotionalState
+from src.project_types import PhoneSpecifications, EmotionalState
 from src.presentation.persona_engine import PersonalityArchetype
 
 Window.size = (400, 800)

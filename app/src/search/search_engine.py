@@ -5,7 +5,7 @@ Internal memory search + user-approved internet search
 
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
-from src.types import SearchQuery
+from src.project_types import SearchQuery
 
 
 class SearchEngine:

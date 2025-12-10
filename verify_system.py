@@ -1,12 +1,14 @@
 import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+# Add the app directory to the path to allow imports from src/
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'app'))
 
 
 def verify_imports():
     try:
         from src.main import ProjectMind
-        from src.types import PhoneSpecifications, PersonaProfile, NameProfile
+        from src.project_types import PhoneSpecifications, PersonaProfile, NameProfile
         from src.presentation.persona_engine import PersonaEngine
         from src.presentation.gui_engine import GuiEngine
         from src.presentation.voice_evolution_engine import VoiceEvolutionEngine
@@ -55,7 +57,7 @@ def verify_naming_system():
 
 def verify_type_definitions():
     try:
-        from src.types import (
+        from src.project_types import (
             PersonaProfile, PersonaArchetype, PersonaFaceProfile,
             PersonaBehaviorProfile, PersonaVoiceProfile,
             NameProfile, NamingStatus, NameChangeInitiator
@@ -86,7 +88,7 @@ def verify_presentation_integration():
 def verify_memory_integration():
     try:
         from src.memory.heart import Heart
-        from src.types import PersonaProfile
+        from src.project_types import PersonaProfile
         
         heart = Heart("test_heart.json")
         if not hasattr(heart, 'persona_profile'):

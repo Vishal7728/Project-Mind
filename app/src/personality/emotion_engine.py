@@ -6,7 +6,7 @@ Manages AI personality traits, emotional responses, and user bonding
 import random
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
-from src.types import (
+from src.project_types import (
     EmotionalState, EmotionalProfile, PersonalityTrait,
     InteractionLog, PersonaBehaviorProfile
 )

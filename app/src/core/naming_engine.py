@@ -6,7 +6,7 @@ Strengthens emotional connection through identity
 
 from datetime import datetime
 from typing import Optional, Dict, List
-from src.types import (
+from src.project_types import (
     NameProfile, NamingStatus, NamingEvent, 
     NameChangeInitiator, EmotionalState
 )

@@ -198,12 +198,21 @@ class BuildValidator:
         """Check kivy_main.py file"""
         print("\n6. Checking kivy_main.py...")
         
-        if not os.path.exists('kivy_main.py'):
-            self.errors.append("kivy_main.py not found!")
+        # Check both possible locations: root and app/src/
+        kivy_main_paths = ['kivy_main.py', 'app/src/kivy_main.py']
+        kivy_main_path = None
+        
+        for path in kivy_main_paths:
+            if os.path.exists(path):
+                kivy_main_path = path
+                break
+        
+        if not kivy_main_path:
+            self.errors.append("kivy_main.py not found in root or app/src/")
             return
         
         try:
-            with open('kivy_main.py', 'r') as f:
+            with open(kivy_main_path, 'r') as f:
                 content = f.read()
             
             # Check for App class
@@ -218,7 +227,7 @@ class BuildValidator:
             else:
                 self.errors.append("build() method not found in kivy_main.py")
                 
-            self.info.append(f"kivy_main.py: {len(content)} characters")
+            self.info.append(f"kivy_main.py: {len(content)} characters (found at {kivy_main_path})")
             
         except Exception as e:
             self.errors.append(f"Error reading kivy_main.py: {str(e)}")

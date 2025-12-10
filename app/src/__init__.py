@@ -9,7 +9,7 @@ __description__ = "A living, emotionally intelligent AI for phones"
 __author__ = "Project Mind Team"
 
 from src.main import ProjectMind
-from src.types import (
+from src.project_types import (
     PhoneSpecifications, 
     PermissionType, 
     EmotionalState,

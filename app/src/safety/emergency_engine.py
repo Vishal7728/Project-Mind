@@ -5,7 +5,7 @@ Detects dangerous situations and triggers emergency responses
 
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Callable
-from src.types import Alert, AlertSeverity, SensorData
+from src.project_types import Alert, AlertSeverity, SensorData
 
 
 class EmergencyEngine:

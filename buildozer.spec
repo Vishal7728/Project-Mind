@@ -7,7 +7,7 @@ package.domain = org.projectmind
 version = 1.0.0
 
 # Source and Build Settings
-source.dir = app/src
+source.dir = .
 source.include_exts = py,png,jpg,jpeg,kv,atlas,json,txt,md
 source.exclude_exts = spec,pyc,pyo,pyd,so,exe
 
@@ -24,13 +24,15 @@ android.archs = arm64-v8a,armeabi-v7a
 android.accept_sdk_license = True
 
 # Android Gradle Configuration
-android.gradle_options = org.gradle.jvmargs=-Xmx2048m,org.gradle.caching=true,org.gradle.workers.max=4
+android.gradle_options = org.gradle.jvmargs=-Xmx2048m
+android.gradle_options = org.gradle.caching=true
+android.gradle_options = org.gradle.workers.max=4
 
 # Python Requirements (CRITICAL: Cython must be 0.29.33)
-requirements = python3,kivy==2.1.0,cython==0.29.33,pillow,numpy,flask,requests,setuptools,wheel
+requirements = python3,kivy,pillow
 
 # Android App Entry Point
-android.entrypoint = org.kivy.android.PythonActivity
+android.entrypoint = org.renpy.android.PythonActivity
 
 # Permissions
 permissions = CAMERA,MICROPHONE,INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,RECORD_AUDIO,MODIFY_AUDIO_SETTINGS,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,READ_PHONE_STATE,ACCESS_NETWORK_STATE

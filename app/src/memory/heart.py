@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 import hashlib
-from src.types import MemoryEntry, PersonalityTrait, EmotionalProfile, EmotionalState, NameProfile, PersonaProfile
+from src.project_types import MemoryEntry, PersonalityTrait, EmotionalProfile, EmotionalState, NameProfile, PersonaProfile
 
 
 class Heart:

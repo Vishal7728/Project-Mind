@@ -30,7 +30,7 @@ jobs:
 
     - name: Run Build Validation
       run: |
-        python scripts/validate_build.py
+        python validate_build.py
         echo "Build validation successful!"
 
   build-apk:
